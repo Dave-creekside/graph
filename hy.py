@@ -29,8 +29,8 @@ Interactive Mode Commands:
     remove                Force a 'remove' action
     reason [query]        Ask a reasoning query (Ollama will respond)
     reason_fb [query]     Ask a reasoning query with feedback to update the hypergraph
-    save [file]           Save the current hypergraph to a file
-    load [file]           Load a hypergraph from a file
+    save [file]           Save the current hypergraph and reasoning parameters to a file
+    load [file]           Load a hypergraph and its reasoning parameters from a file
     customize             Customize hypergraph reasoning parameters
     evolve                Apply cellular automata rules to evolve the hypergraph
     explore [node]        Explore connections for a specific node
@@ -143,6 +143,7 @@ class Hypergraph:
     def to_dict(self):
         """
         Convert the hypergraph to a dictionary for serialization.
+        Also includes the current reasoning parameters.
         """
         return {
             "nodes": list(self.nodes),
@@ -154,13 +155,15 @@ class Hypergraph:
                 }
                 for edge_id, edge_data in self.hyperedges.items()
             },
-            "edge_counter": self.edge_counter
+            "edge_counter": self.edge_counter,
+            "parameters": REASONING_PARAMS  # Include the current reasoning parameters
         }
     
     @classmethod
     def from_dict(cls, data):
         """
         Create a hypergraph from a dictionary representation.
+        Also extracts and returns any saved reasoning parameters.
         """
         hg = cls()
         hg.nodes = set(data["nodes"])
@@ -179,7 +182,10 @@ class Hypergraph:
                 "semantic_similarity": semantic_similarity
             }
         
-        return hg
+        # Extract parameters if present
+        saved_params = data.get("parameters", None)
+        
+        return hg, saved_params
 
 def save_hypergraph(hg, filename):
     """
@@ -190,19 +196,31 @@ def save_hypergraph(hg, filename):
     with open(filename, 'w', encoding='utf-8') as f:
         json.dump(hg.to_dict(), f, indent=2)
     
-    print(f"Hypergraph saved to {filename}")
+    print(f"Hypergraph and reasoning parameters saved to {filename}")
 
 def load_hypergraph(filename):
     """
     Load a hypergraph from a JSON file.
+    Also loads and applies any saved reasoning parameters.
     """
     import json
+    global REASONING_PARAMS
     
     try:
         with open(filename, 'r', encoding='utf-8') as f:
             data = json.load(f)
         
-        hg = Hypergraph.from_dict(data)
+        hg, saved_params = Hypergraph.from_dict(data)
+        
+        # Apply saved parameters if present
+        if saved_params:
+            print("Loading saved reasoning parameters:")
+            for param, value in saved_params.items():
+                if param in REASONING_PARAMS:
+                    old_value = REASONING_PARAMS[param]
+                    REASONING_PARAMS[param] = value
+                    print(f"  {param}: {old_value} -> {value}")
+        
         print(f"Hypergraph loaded from {filename}")
         return hg
     except Exception as e:
@@ -436,6 +454,7 @@ REASONING_PARAMS = {
     "llm_max_tokens": 250,              # Maximum tokens for LLM response
     "llm_model": "deepseek-r1:latest",  # Ollama model to use
     "apply_ca_rules": True,             # Whether to apply CA rules during reasoning
+    "max_steps": 300,                   # Maximum number of steps for the environment
 }
 
 def apply_hypergraph_reasoning(hg: Hypergraph, query):
@@ -697,6 +716,14 @@ def customize_reasoning_parameters():
     new_val = input(f"Apply CA rules (true/false) [{REASONING_PARAMS['apply_ca_rules']}]: ").strip().lower()
     if new_val in ('true', 'false'):
         REASONING_PARAMS["apply_ca_rules"] = (new_val == 'true')
+    
+    # Max steps
+    new_val = input(f"Max steps [{REASONING_PARAMS['max_steps']}]: ").strip()
+    if new_val:
+        try:
+            REASONING_PARAMS["max_steps"] = int(new_val)
+        except ValueError:
+            print("Invalid value. Keeping current value.")
     
     print("\nUpdated parameters:")
     for param, value in REASONING_PARAMS.items():
@@ -1012,8 +1039,8 @@ def interactive_mode(env):
             print("  remove         - Force a 'remove' action")
             print("  reason [query] - Ask a reasoning query (Ollama will respond)")
             print("  reason_fb [q]  - Ask a reasoning query with feedback to update the hypergraph")
-            print("  save [file]    - Save the current hypergraph to a file")
-            print("  load [file]    - Load a hypergraph from a file")
+            print("  save [file]    - Save the current hypergraph and parameters to a file")
+            print("  load [file]    - Load a hypergraph and its parameters from a file")
             print("  customize      - Customize hypergraph reasoning parameters")
             print("  evolve         - Apply cellular automata rules to evolve the hypergraph")
             print("  explore [node] - Explore connections for a specific node")
@@ -1028,6 +1055,10 @@ def interactive_mode(env):
             # Save current state before modifications
             hypergraph_history.append(copy.deepcopy(env.hypergraph))
             
+            # Reset the environment's current step counter and max_steps
+            env.current_step = 0
+            env.max_steps = REASONING_PARAMS["max_steps"]
+            
             for i in range(n_steps):
                 contextualize_hypergraph(env.hypergraph)
                 action = choose_informed_action(env.hypergraph, threshold=0.5, min_edges=10)
@@ -1036,7 +1067,7 @@ def interactive_mode(env):
                 current_reward = combined_reward(env.hypergraph)
                 print(f"Step executed: {info['action']} | Combined Reward: {current_reward:.4f} | Action: {action}")
                 if done:
-                    print("Maximum steps reached.")
+                    print(f"Maximum steps reached ({REASONING_PARAMS['max_steps']} steps).")
                     break
         elif command == "add":
             # Save current state before modifications
@@ -1146,8 +1177,9 @@ def interactive_mode(env):
             # Save current state before modifications
             hypergraph_history.append(copy.deepcopy(env.hypergraph))
             
-            print("Applying cellular automata rules to evolve the hypergraph...")
-            env.hypergraph, ca_pairs = apply_ca_rule(env.hypergraph, common_neighbors_threshold=2)
+            threshold = REASONING_PARAMS["ca_neighbors_threshold"]
+            print(f"Applying cellular automata rules to evolve the hypergraph (threshold: {threshold})...")
+            env.hypergraph, ca_pairs = apply_ca_rule(env.hypergraph, common_neighbors_threshold=threshold)
             contextualize_hypergraph(env.hypergraph)
             
             if ca_pairs:
@@ -1157,7 +1189,7 @@ def interactive_mode(env):
                 if len(ca_pairs) > 5:
                     print(f"  - (and {len(ca_pairs) - 5} more)")
             else:
-                print("No new connections were formed.")
+                print(f"No new connections were formed. Try lowering the CA neighbors threshold (currently {threshold}).")
         elif command.startswith("explore"):
             parts = command.split(maxsplit=1)
             if len(parts) < 2:
@@ -1369,9 +1401,10 @@ def main():
             break
 
     # Apply a cellular automata update.
-    env.hypergraph, ca_pairs = apply_ca_rule(env.hypergraph, common_neighbors_threshold=2)
+    threshold = REASONING_PARAMS["ca_neighbors_threshold"]
+    env.hypergraph, ca_pairs = apply_ca_rule(env.hypergraph, common_neighbors_threshold=threshold)
     if args.verbose:
-        print("Applied CA rule; new hyperedge pairs added:", ca_pairs)
+        print(f"Applied CA rule (threshold: {threshold}); new hyperedge pairs added: {len(ca_pairs)}")
 
     # Final outputs and plots.
     G_final = hypergraph_to_graph(env.hypergraph)

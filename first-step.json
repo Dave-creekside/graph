@@ -1,0 +1,31 @@
+{
+  "nodes": [
+    "mammal",
+    "pet",
+    "cat"
+  ],
+  "hyperedges": {
+    "0": {
+      "nodes": [
+        "mammal",
+        "pet",
+        "cat"
+      ],
+      "label": "Initial Edge",
+      "semantic_similarity": 0.0
+    }
+  },
+  "edge_counter": 1,
+  "parameters": {
+    "similarity_threshold": 0.4,
+    "ca_neighbors_threshold": 2,
+    "max_relevant_nodes": 10,
+    "max_relevant_edges": 7,
+    "max_ca_examples": 3,
+    "llm_temperature": 0.7,
+    "llm_max_tokens": 500,
+    "llm_model": "llama3.2:latest",
+    "apply_ca_rules": true,
+    "max_steps": 600
+  }
+}
