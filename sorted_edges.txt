@@ -1,0 +1,10 @@
+Edge 170: Nodes: {'prey', 'history', 'scales'}, Semantic Similarity: 0.064
+Edge 173: Nodes: {'feline', 'scales', 'predator'}, Semantic Similarity: 0.088
+Edge 175: Nodes: {'wild', 'domestic'}, Semantic Similarity: 0.197
+Edge 167: Nodes: {'slow', 'vertebrate'}, Semantic Similarity: 0.211
+Edge 160: Nodes: {'ocean', 'invertebrate', 'large'}, Semantic Similarity: 0.255
+Edge 177: Nodes: {'avian', 'wild'}, Semantic Similarity: 0.271
+Edge 179: Nodes: {'canine', 'lion'}, Semantic Similarity: 0.311
+Edge 178: Nodes: {'scales', 'cat', 'pet'}, Semantic Similarity: 0.372
+Edge 174: Nodes: {'feathers', 'reptile'}, Semantic Similarity: 0.477
+Edge 147: Nodes: {'dog', 'wild'}, Semantic Similarity: 0.483
