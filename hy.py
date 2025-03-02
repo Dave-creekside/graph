@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 CLI Application for Hypergraph Evolution with Semantic and Structural Analysis,
-Interactive Mode, and Local LLM Reasoning Integration via Ollama's Local API.
+Interactive Mode, and Multi-Provider LLM Reasoning Integration.
 
 This application demonstrates how hypergraph reasoning and cellular automata rules
 can affect language model reasoning processes. It builds a semantic hypergraph from
@@ -17,7 +17,7 @@ Arguments:
     --verbose             Enable verbose output
     --interactive         Enter interactive mode after simulation
     --vocab_file PATH     Path to external vocabulary file (one word per line)
-    --model STRING        Ollama model to use for reasoning (default: deepseek-r1:latest)
+    --model STRING        Model to use for reasoning (default: deepseek-r1:latest)
     --skip_init           Skip initial hypergraph generation and go directly to interactive mode
     --small_init          Use a small initial hypergraph (faster startup)
     --num_edges INT       Number of initial hyperedges to generate (default: 50)
@@ -27,11 +27,11 @@ Interactive Mode Commands:
     step [n]              Execute n simulation steps (default is 1)
     add                   Force an 'add' action
     remove                Force a 'remove' action
-    reason [query]        Ask a reasoning query (Ollama will respond)
+    reason [query]        Ask a reasoning query (LLM will respond)
     reason_fb [query]     Ask a reasoning query with feedback to update the hypergraph
     save [file]           Save the current hypergraph and reasoning parameters to a file
     load [file]           Load a hypergraph and its reasoning parameters from a file
-    customize             Customize hypergraph reasoning parameters
+    customize             Customize hypergraph reasoning parameters and LLM provider settings
     evolve                Apply cellular automata rules to evolve the hypergraph
     explore [node]        Explore connections for a specific node
     plot                  Update and save plots (graph, histogram, spectrum)
@@ -39,7 +39,7 @@ Interactive Mode Commands:
     undo                  Revert to previous hypergraph state (if available)
     exit                  Exit interactive mode
 
-Dependencies:
+Core Dependencies:
     - networkx
     - matplotlib
     - numpy
@@ -48,8 +48,16 @@ Dependencies:
     - requests
     - argparse
 
+LLM Provider Dependencies (Optional):
+    - Ollama (for local models)
+    - openai (for OpenAI models)
+    - anthropic (for Claude models)
+    - groq (for Groq models)
+    - google-generativeai (for Gemini models)
+
 Note:
-    Ensure that Ollama is running locally and its API is accessible at the configured endpoint.
+    For Ollama, ensure that it is running locally and its API is accessible.
+    For other providers, an API key must be set through the customize menu.
 """
 
 import argparse
@@ -58,6 +66,40 @@ import random
 import requests
 import sys
 import time
+import os
+
+# Optional imports for additional LLM providers
+try:
+    import openai
+    OPENAI_AVAILABLE = True
+except ImportError:
+    print("Warning: openai package not installed. OpenAI integration will be disabled.")
+    print("To install: pip install openai")
+    OPENAI_AVAILABLE = False
+
+try:
+    import anthropic
+    ANTHROPIC_AVAILABLE = True
+except ImportError:
+    print("Warning: anthropic package not installed. Anthropic integration will be disabled.")
+    print("To install: pip install anthropic")
+    ANTHROPIC_AVAILABLE = False
+
+try:
+    import groq
+    GROQ_AVAILABLE = True
+except ImportError:
+    print("Warning: groq package not installed. Groq integration will be disabled.")
+    print("To install: pip install groq")
+    GROQ_AVAILABLE = False
+
+try:
+    import google.generativeai as genai
+    GEMINI_AVAILABLE = True
+except ImportError:
+    print("Warning: google-generativeai package not installed. Google Gemini integration will be disabled.")
+    print("To install: pip install google-generativeai")
+    GEMINI_AVAILABLE = False
 
 # Try to import optional dependencies with graceful fallback
 try:
@@ -452,9 +494,20 @@ REASONING_PARAMS = {
     "max_ca_examples": 3,               # Maximum number of CA examples to include in prompt
     "llm_temperature": 0.7,             # Temperature for LLM generation
     "llm_max_tokens": 250,              # Maximum tokens for LLM response
-    "llm_model": "deepseek-r1:latest",  # Ollama model to use
+    "llm_provider": "ollama",           # LLM provider (ollama, openai, anthropic, groq, gemini)
+    "llm_model": "deepseek-r1:latest",  # Model to use for the selected provider
+    "llm_api_key": "",                  # API key for non-Ollama providers
     "apply_ca_rules": True,             # Whether to apply CA rules during reasoning
     "max_steps": 300,                   # Maximum number of steps for the environment
+}
+
+# Provider-specific model options
+LLM_PROVIDER_MODELS = {
+    "ollama": ["deepseek-r1:latest", "llama3", "mistral", "phi3", "gemma", "llama2"],
+    "openai": ["gpt-4", "gpt-4-turbo", "gpt-3.5-turbo"],
+    "anthropic": ["claude-3-opus", "claude-3-sonnet", "claude-3-haiku"],
+    "groq": ["llama3-8b-8192", "llama3-70b-8192", "mixtral-8x7b-32768"],
+    "gemini": ["gemini-pro", "gemini-1.5-pro"]
 }
 
 def apply_hypergraph_reasoning(hg: Hypergraph, query):
@@ -509,7 +562,7 @@ def apply_hypergraph_reasoning(hg: Hypergraph, query):
 def query_llm(hg: Hypergraph, query, max_tokens=None, timeout=30, update_graph=False):
     """
     Create a prompt from the current hypergraph state and the user query,
-    and use Ollama's local API to generate a reasoning response.
+    and use the selected LLM provider to generate a reasoning response.
     
     If update_graph is True, the LLM's response will be used to update the hypergraph
     by strengthening or weakening connections based on the reasoning.
@@ -585,16 +638,47 @@ def query_llm(hg: Hypergraph, query, max_tokens=None, timeout=30, update_graph=F
     # Finalize the prompt
     prompt = context + "\n## Query\n" + query + "\n\n## Response:\n"
     
-    # Try using the Ollama API with the /api/chat endpoint first (newer versions)
+    # Get the selected provider
+    provider = REASONING_PARAMS.get("llm_provider", "ollama").lower()
+    model = REASONING_PARAMS.get("llm_model", "deepseek-r1:latest")
+    temperature = REASONING_PARAMS.get("llm_temperature", 0.7)
+    api_key = REASONING_PARAMS.get("llm_api_key", "")
+    
+    # Use the appropriate provider
+    if provider == "ollama":
+        return query_ollama(prompt, model, max_tokens, temperature, timeout)
+    elif provider == "openai" and OPENAI_AVAILABLE:
+        return query_openai(prompt, model, max_tokens, temperature, api_key, timeout)
+    elif provider == "anthropic" and ANTHROPIC_AVAILABLE:
+        return query_anthropic(prompt, model, max_tokens, temperature, api_key, timeout)
+    elif provider == "groq" and GROQ_AVAILABLE:
+        return query_groq(prompt, model, max_tokens, temperature, api_key, timeout)
+    elif provider == "gemini" and GEMINI_AVAILABLE:
+        return query_gemini(prompt, model, max_tokens, temperature, api_key, timeout)
+    else:
+        if provider != "ollama":
+            missing_pkg = {
+                "openai": "openai",
+                "anthropic": "anthropic",
+                "groq": "groq",
+                "gemini": "google-generativeai"
+            }.get(provider, provider)
+            return f"Error: The {provider} provider is selected but the {missing_pkg} package is not installed. Please install it with 'pip install {missing_pkg}' and try again."
+        return "Error: No valid LLM provider available. Please check your configuration."
+
+def query_ollama(prompt, model, max_tokens, temperature, timeout=30):
+    """
+    Query the Ollama API with the given prompt.
+    """
     try:
-        print("Querying Ollama API (this may take a moment)...")
+        print(f"Querying Ollama API with model {model} (this may take a moment)...")
         
         # First try the newer chat endpoint
         chat_url = "http://localhost:11434/api/chat"
         chat_payload = {
-            "model": REASONING_PARAMS["llm_model"],
+            "model": model,
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": REASONING_PARAMS["llm_temperature"]
+            "temperature": temperature
         }
         
         try:
@@ -609,11 +693,11 @@ def query_llm(hg: Hypergraph, query, max_tokens=None, timeout=30, update_graph=F
         # Fall back to the older generate endpoint
         generate_url = "http://localhost:11434/api/generate"
         generate_payload = {
-            "model": REASONING_PARAMS["llm_model"],
+            "model": model,
             "prompt": prompt,
             "stream": False,
             "max_tokens": max_tokens,
-            "temperature": REASONING_PARAMS["llm_temperature"]
+            "temperature": temperature
         }
         
         response = requests.post(generate_url, json=generate_payload, timeout=timeout)
@@ -647,6 +731,121 @@ def query_llm(hg: Hypergraph, query, max_tokens=None, timeout=30, update_graph=F
     except Exception as e:
         return f"Error calling Ollama API: {str(e)}"
 
+def query_openai(prompt, model, max_tokens, temperature, api_key, timeout=30):
+    """
+    Query the OpenAI API with the given prompt.
+    """
+    if not api_key:
+        return "Error: OpenAI API key is required. Please set it in the customize menu."
+    
+    try:
+        print(f"Querying OpenAI API with model {model}...")
+        
+        # Configure the client
+        client = openai.OpenAI(api_key=api_key)
+        
+        # Create the chat completion
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=temperature,
+            max_tokens=max_tokens,
+            timeout=timeout
+        )
+        
+        # Extract the response content
+        return response.choices[0].message.content
+    
+    except Exception as e:
+        return f"Error calling OpenAI API: {str(e)}"
+
+def query_anthropic(prompt, model, max_tokens, temperature, api_key, timeout=30):
+    """
+    Query the Anthropic API with the given prompt.
+    """
+    if not api_key:
+        return "Error: Anthropic API key is required. Please set it in the customize menu."
+    
+    try:
+        print(f"Querying Anthropic API with model {model}...")
+        
+        # Configure the client
+        client = anthropic.Anthropic(api_key=api_key)
+        
+        # Create the message
+        response = client.messages.create(
+            model=model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            messages=[{"role": "user", "content": prompt}],
+            timeout=timeout
+        )
+        
+        # Extract the response content
+        return response.content[0].text
+    
+    except Exception as e:
+        return f"Error calling Anthropic API: {str(e)}"
+
+def query_groq(prompt, model, max_tokens, temperature, api_key, timeout=30):
+    """
+    Query the Groq API with the given prompt.
+    """
+    if not api_key:
+        return "Error: Groq API key is required. Please set it in the customize menu."
+    
+    try:
+        print(f"Querying Groq API with model {model}...")
+        
+        # Configure the client
+        client = groq.Groq(api_key=api_key)
+        
+        # Create the chat completion
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=temperature,
+            max_tokens=max_tokens,
+            timeout=timeout
+        )
+        
+        # Extract the response content
+        return response.choices[0].message.content
+    
+    except Exception as e:
+        return f"Error calling Groq API: {str(e)}"
+
+def query_gemini(prompt, model, max_tokens, temperature, api_key, timeout=30):
+    """
+    Query the Google Gemini API with the given prompt.
+    """
+    if not api_key:
+        return "Error: Google API key is required. Please set it in the customize menu."
+    
+    try:
+        print(f"Querying Google Gemini API with model {model}...")
+        
+        # Configure the API
+        genai.configure(api_key=api_key)
+        
+        # Create the model
+        model_obj = genai.GenerativeModel(model_name=model)
+        
+        # Generate content
+        response = model_obj.generate_content(
+            prompt,
+            generation_config=genai.GenerationConfig(
+                temperature=temperature,
+                max_output_tokens=max_tokens
+            )
+        )
+        
+        # Extract the response content
+        return response.text
+    
+    except Exception as e:
+        return f"Error calling Google Gemini API: {str(e)}"
+
 def customize_reasoning_parameters():
     """
     Allow users to customize the parameters used for hypergraph reasoning.
@@ -655,9 +854,93 @@ def customize_reasoning_parameters():
     print("\n=== Customize Hypergraph Reasoning Parameters ===")
     print("Current parameters:")
     for param, value in REASONING_PARAMS.items():
-        print(f"  {param}: {value}")
+        # Don't show API key for security
+        if param == "llm_api_key":
+            if value:
+                print(f"  {param}: [API KEY SET]")
+            else:
+                print(f"  {param}: [NOT SET]")
+        else:
+            print(f"  {param}: {value}")
     
     print("\nEnter new values (or press Enter to keep current value):")
+    
+    # LLM Provider selection
+    print("\n--- LLM Provider Configuration ---")
+    
+    # Show available providers
+    available_providers = ["ollama"]
+    if OPENAI_AVAILABLE:
+        available_providers.append("openai")
+    if ANTHROPIC_AVAILABLE:
+        available_providers.append("anthropic")
+    if GROQ_AVAILABLE:
+        available_providers.append("groq")
+    if GEMINI_AVAILABLE:
+        available_providers.append("gemini")
+    
+    print(f"Available LLM providers: {', '.join(available_providers)}")
+    
+    # Select provider
+    current_provider = REASONING_PARAMS.get("llm_provider", "ollama")
+    new_provider = input(f"LLM provider [{current_provider}]: ").strip().lower()
+    
+    if new_provider and new_provider in available_providers:
+        REASONING_PARAMS["llm_provider"] = new_provider
+        
+        # If provider changed, reset model to a default for that provider
+        if new_provider != current_provider:
+            if new_provider == "ollama":
+                REASONING_PARAMS["llm_model"] = "deepseek-r1:latest"
+            elif new_provider == "openai":
+                REASONING_PARAMS["llm_model"] = "gpt-3.5-turbo"
+            elif new_provider == "anthropic":
+                REASONING_PARAMS["llm_model"] = "claude-3-haiku"
+            elif new_provider == "groq":
+                REASONING_PARAMS["llm_model"] = "llama3-8b-8192"
+            elif new_provider == "gemini":
+                REASONING_PARAMS["llm_model"] = "gemini-pro"
+    elif new_provider and new_provider not in available_providers:
+        print(f"Provider '{new_provider}' is not available. Install the required package first.")
+        print(f"Keeping current provider: {current_provider}")
+    
+    # Show available models for the selected provider
+    provider = REASONING_PARAMS.get("llm_provider", "ollama")
+    if provider in LLM_PROVIDER_MODELS:
+        models = LLM_PROVIDER_MODELS[provider]
+        print(f"Available models for {provider}: {', '.join(models)}")
+    
+    # Select model
+    current_model = REASONING_PARAMS.get("llm_model", "deepseek-r1:latest")
+    new_model = input(f"LLM model [{current_model}]: ").strip()
+    if new_model:
+        REASONING_PARAMS["llm_model"] = new_model
+    
+    # API key (if not ollama)
+    if provider != "ollama":
+        current_key = REASONING_PARAMS.get("llm_api_key", "")
+        key_display = "[API KEY SET]" if current_key else "[NOT SET]"
+        new_key = input(f"API key for {provider} {key_display}: ").strip()
+        if new_key:
+            REASONING_PARAMS["llm_api_key"] = new_key
+    
+    # LLM temperature
+    new_val = input(f"LLM temperature [{REASONING_PARAMS['llm_temperature']}]: ").strip()
+    if new_val:
+        try:
+            REASONING_PARAMS["llm_temperature"] = float(new_val)
+        except ValueError:
+            print("Invalid value. Keeping current value.")
+    
+    # LLM max tokens
+    new_val = input(f"LLM max tokens [{REASONING_PARAMS['llm_max_tokens']}]: ").strip()
+    if new_val:
+        try:
+            REASONING_PARAMS["llm_max_tokens"] = int(new_val)
+        except ValueError:
+            print("Invalid value. Keeping current value.")
+    
+    print("\n--- Hypergraph Parameters ---")
     
     # Similarity threshold
     new_val = input(f"Similarity threshold [{REASONING_PARAMS['similarity_threshold']}]: ").strip()
@@ -691,27 +974,6 @@ def customize_reasoning_parameters():
         except ValueError:
             print("Invalid value. Keeping current value.")
     
-    # LLM temperature
-    new_val = input(f"LLM temperature [{REASONING_PARAMS['llm_temperature']}]: ").strip()
-    if new_val:
-        try:
-            REASONING_PARAMS["llm_temperature"] = float(new_val)
-        except ValueError:
-            print("Invalid value. Keeping current value.")
-    
-    # LLM max tokens
-    new_val = input(f"LLM max tokens [{REASONING_PARAMS['llm_max_tokens']}]: ").strip()
-    if new_val:
-        try:
-            REASONING_PARAMS["llm_max_tokens"] = int(new_val)
-        except ValueError:
-            print("Invalid value. Keeping current value.")
-    
-    # LLM model
-    new_val = input(f"LLM model [{REASONING_PARAMS['llm_model']}]: ").strip()
-    if new_val:
-        REASONING_PARAMS["llm_model"] = new_val
-    
     # Apply CA rules
     new_val = input(f"Apply CA rules (true/false) [{REASONING_PARAMS['apply_ca_rules']}]: ").strip().lower()
     if new_val in ('true', 'false'):
@@ -727,7 +989,14 @@ def customize_reasoning_parameters():
     
     print("\nUpdated parameters:")
     for param, value in REASONING_PARAMS.items():
-        print(f"  {param}: {value}")
+        # Don't show API key for security
+        if param == "llm_api_key":
+            if value:
+                print(f"  {param}: [API KEY SET]")
+            else:
+                print(f"  {param}: [NOT SET]")
+        else:
+            print(f"  {param}: {value}")
     
     return REASONING_PARAMS
 
@@ -1037,11 +1306,11 @@ def interactive_mode(env):
             print("  step [n]       - Execute n simulation steps (default is 1)")
             print("  add            - Force an 'add' action")
             print("  remove         - Force a 'remove' action")
-            print("  reason [query] - Ask a reasoning query (Ollama will respond)")
+            print("  reason [query] - Ask a reasoning query (LLM will respond)")
             print("  reason_fb [q]  - Ask a reasoning query with feedback to update the hypergraph")
             print("  save [file]    - Save the current hypergraph and parameters to a file")
             print("  load [file]    - Load a hypergraph and its parameters from a file")
-            print("  customize      - Customize hypergraph reasoning parameters")
+            print("  customize      - Customize hypergraph reasoning parameters and LLM provider settings")
             print("  evolve         - Apply cellular automata rules to evolve the hypergraph")
             print("  explore [node] - Explore connections for a specific node")
             print("  plot           - Update and save plots (graph, histogram, spectrum)")
@@ -1115,7 +1384,8 @@ def interactive_mode(env):
             
             # Now get the LLM response with feedback
             response = query_llm(env.hypergraph, query, update_graph=True)
-            print("\nOllama Reasoning Output:\n", response)
+            provider = REASONING_PARAMS.get("llm_provider", "ollama").capitalize()
+            print(f"\n{provider} Reasoning Output:\n", response)
             
             # Update the hypergraph based on the LLM's feedback
             updated_hg, changes = update_hypergraph_from_llm_feedback(env.hypergraph, response)
@@ -1172,7 +1442,8 @@ def interactive_mode(env):
             
             # Now get the LLM response
             response = query_llm(env.hypergraph, query)
-            print("\nOllama Reasoning Output:\n", response)
+            provider = REASONING_PARAMS.get("llm_provider", "ollama").capitalize()
+            print(f"\n{provider} Reasoning Output:\n", response)
         elif command == "evolve":
             # Save current state before modifications
             hypergraph_history.append(copy.deepcopy(env.hypergraph))
@@ -1327,17 +1598,17 @@ def main():
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
     parser.add_argument("--interactive", action="store_true", help="Enter interactive mode after simulation")
     parser.add_argument("--vocab_file", type=str, help="Path to external vocabulary file (one word per line)")
-    parser.add_argument("--model", type=str, help="Ollama model to use for reasoning (default: deepseek-r1:latest)")
+    parser.add_argument("--model", type=str, help="Model to use for reasoning (default: deepseek-r1:latest)")
     parser.add_argument("--skip_init", action="store_true", help="Skip initial hypergraph generation and go directly to interactive mode")
     parser.add_argument("--small_init", action="store_true", help="Use a small initial hypergraph (faster startup)")
     parser.add_argument("--num_edges", type=int, default=50, help="Number of initial hyperedges to generate")
     args = parser.parse_args()
     
-    # Set the Ollama model if specified
+    # Set the model if specified
     if args.model:
         REASONING_PARAMS["llm_model"] = args.model
         if args.verbose:
-            print(f"Using Ollama model: {args.model}")
+            print(f"Using model: {args.model}")
 
     # Load vocabulary from external file if provided, else use default expanded vocabulary.
     if args.vocab_file:

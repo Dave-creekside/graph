@@ -8,13 +8,14 @@ This application demonstrates how hypergraph reasoning and cellular automata rul
 - **Reinforcement Learning**: Evolve the hypergraph through RL-based actions
 - **Cellular Automata Rules**: Apply CA rules to form new connections based on graph structure
 - **Semantic Analysis**: Calculate semantic similarities between nodes using spaCy
-- **LLM Integration**: Use Ollama's local API to perform reasoning based on the hypergraph
+- **Multi-LLM Integration**: Use various LLM providers (Ollama, OpenAI, Anthropic, Groq, Google Gemini) to perform reasoning
 - **Interactive Mode**: Explore and manipulate the hypergraph through a command-line interface
 - **Visualization**: Generate plots of the hypergraph, semantic histograms, and spectral analysis
 - **Save/Load**: Persist and restore hypergraphs between sessions
 
 ## Requirements
 
+### Core Dependencies
 - Python 3.6+
 - NetworkX
 - Matplotlib
@@ -22,18 +23,39 @@ This application demonstrates how hypergraph reasoning and cellular automata rul
 - spaCy (with the 'en_core_web_md' model installed)
 - SciPy
 - Requests
-- Ollama (running locally)
+
+### LLM Provider Dependencies (Optional)
+- Ollama (for local models)
+- OpenAI Python package (`pip install openai`)
+- Anthropic Python package (`pip install anthropic`)
+- Groq Python package (`pip install groq`)
+- Google Generative AI package (`pip install google-generativeai`)
 
 ## Installation
 
 1. Clone this repository
-2. Install the required dependencies:
+2. Install the core dependencies:
    ```
    pip install networkx matplotlib numpy spacy scipy requests
    python -m spacy download en_core_web_md
    ```
-3. Install Ollama from [https://ollama.ai/](https://ollama.ai/)
-4. Pull a model in Ollama (e.g., `ollama pull llama3`)
+3. Install LLM provider packages as needed:
+   ```
+   # For Ollama (local models)
+   # Install from https://ollama.ai/
+
+   # For OpenAI models (GPT-4, GPT-3.5, etc.)
+   pip install openai
+
+   # For Anthropic models (Claude)
+   pip install anthropic
+
+   # For Groq models
+   pip install groq
+
+   # For Google Gemini models
+   pip install google-generativeai
+   ```
 
 ## Usage
 
@@ -49,7 +71,7 @@ python hy.py --interactive --skip_init --model llama3
 - `--verbose`: Enable verbose output
 - `--interactive`: Enter interactive mode after simulation
 - `--vocab_file PATH`: Path to external vocabulary file (one word per line)
-- `--model STRING`: Ollama model to use for reasoning (default: deepseek-r1:latest)
+- `--model STRING`: Model to use for reasoning (default: deepseek-r1:latest)
 - `--skip_init`: Skip initial hypergraph generation and go directly to interactive mode
 - `--small_init`: Use a small initial hypergraph (faster startup)
 - `--num_edges INT`: Number of initial hyperedges to generate (default: 50)
@@ -60,17 +82,42 @@ python hy.py --interactive --skip_init --model llama3
 - `step [n]`: Execute n simulation steps (default: 1)
 - `add`: Force an 'add' action
 - `remove`: Force a 'remove' action
-- `reason [query]`: Ask a reasoning query (Ollama will respond)
+- `reason [query]`: Ask a reasoning query (LLM will respond)
 - `reason_fb [query]`: Ask a reasoning query with feedback to update the hypergraph
 - `save [file]`: Save the current hypergraph to a file
 - `load [file]`: Load a hypergraph from a file
-- `customize`: Customize hypergraph reasoning parameters
+- `customize`: Customize hypergraph reasoning parameters and LLM provider settings
 - `evolve`: Apply cellular automata rules to evolve the hypergraph
 - `explore [node]`: Explore connections for a specific node
 - `plot`: Update and save plots (graph, histogram, spectrum)
 - `stats`: Display current hypergraph statistics
 - `undo`: Revert to previous hypergraph state (if available)
 - `exit`: Exit interactive mode
+
+## LLM Provider Configuration
+
+The application supports multiple LLM providers that can be configured through the `customize` command in interactive mode:
+
+### Ollama (Local Models)
+- No API key required
+- Models: deepseek-r1:latest, llama3, mistral, phi3, gemma, llama2, etc.
+- Requires Ollama to be installed and running locally
+
+### OpenAI
+- Requires API key from [OpenAI Platform](https://platform.openai.com/)
+- Models: gpt-4, gpt-4-turbo, gpt-3.5-turbo, etc.
+
+### Anthropic
+- Requires API key from [Anthropic Console](https://console.anthropic.com/)
+- Models: claude-3-opus, claude-3-sonnet, claude-3-haiku, etc.
+
+### Groq
+- Requires API key from [Groq Cloud](https://console.groq.com/)
+- Models: llama3-8b-8192, llama3-70b-8192, mixtral-8x7b-32768, etc.
+
+### Google Gemini
+- Requires API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+- Models: gemini-pro, gemini-1.5-pro, etc.
 
 ## Understanding the Evolve Command
 
