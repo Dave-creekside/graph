@@ -499,6 +499,11 @@ REASONING_PARAMS = {
     "llm_api_key": "",                  # API key for non-Ollama providers
     "apply_ca_rules": True,             # Whether to apply CA rules during reasoning
     "max_steps": 300,                   # Maximum number of steps for the environment
+    # Second LLM for dream/self-talk mode
+    "llm2_provider": "ollama",          # Second LLM provider
+    "llm2_model": "llama3",             # Model for the second LLM
+    "llm2_api_key": "",                 # API key for the second LLM (if not Ollama)
+    "dream_iterations": 5,              # Default number of iterations for dream mode
 }
 
 # Provider-specific model options
@@ -1289,6 +1294,232 @@ def update_hypergraph_from_llm_feedback(hg, feedback_text):
     
     return updated_hg, changes
 
+def query_llm2(query, max_tokens=None, timeout=30):
+    """
+    Query the second LLM (used for dream/self-talk mode).
+    This function is similar to query_llm but doesn't use the hypergraph context.
+    """
+    # Use default max_tokens if not specified
+    if max_tokens is None:
+        max_tokens = REASONING_PARAMS["llm_max_tokens"]
+    
+    # Get the selected provider for the second LLM
+    provider = REASONING_PARAMS.get("llm2_provider", "ollama").lower()
+    model = REASONING_PARAMS.get("llm2_model", "llama3")
+    temperature = REASONING_PARAMS.get("llm_temperature", 0.7)
+    api_key = REASONING_PARAMS.get("llm2_api_key", "")
+    
+    # Use the appropriate provider
+    if provider == "ollama":
+        return query_ollama(query, model, max_tokens, temperature, timeout)
+    elif provider == "openai" and OPENAI_AVAILABLE:
+        return query_openai(query, model, max_tokens, temperature, api_key, timeout)
+    elif provider == "anthropic" and ANTHROPIC_AVAILABLE:
+        return query_anthropic(query, model, max_tokens, temperature, api_key, timeout)
+    elif provider == "groq" and GROQ_AVAILABLE:
+        return query_groq(query, model, max_tokens, temperature, api_key, timeout)
+    elif provider == "gemini" and GEMINI_AVAILABLE:
+        return query_gemini(query, model, max_tokens, temperature, api_key, timeout)
+    else:
+        if provider != "ollama":
+            missing_pkg = {
+                "openai": "openai",
+                "anthropic": "anthropic",
+                "groq": "groq",
+                "gemini": "google-generativeai"
+            }.get(provider, provider)
+            return f"Error: The {provider} provider is selected but the {missing_pkg} package is not installed. Please install it with 'pip install {missing_pkg}' and try again."
+        return "Error: No valid LLM provider available. Please check your configuration."
+
+def dream_mode(env, initial_prompt, iterations=5):
+    """
+    Run a self-talk conversation between two LLMs.
+    The first LLM is connected to the hypergraph and operates in reason_fb mode.
+    The second LLM is a standard chat model without hypergraph context.
+    
+    Args:
+        env: The hypergraph environment
+        initial_prompt: The initial prompt to start the conversation
+        iterations: Number of back-and-forth exchanges
+    """
+    print("\n=== Entering Dream Mode (Self-Talk Between Two LLMs) ===")
+    print(f"Initial prompt: {initial_prompt}")
+    print(f"Number of iterations: {iterations}")
+    
+    # Save current state before dream session
+    import copy
+    hypergraph_history = [copy.deepcopy(env.hypergraph)]
+    
+    # Get provider names for display
+    provider1 = REASONING_PARAMS.get("llm_provider", "ollama").capitalize()
+    model1 = REASONING_PARAMS.get("llm_model", "deepseek-r1:latest")
+    provider2 = REASONING_PARAMS.get("llm2_provider", "ollama").capitalize()
+    model2 = REASONING_PARAMS.get("llm2_model", "llama3")
+    
+    print(f"\nLLM 1 (Hypergraph): {provider1} {model1}")
+    print(f"LLM 2 (Standard): {provider2} {model2}")
+    
+    # Start with the initial prompt to the hypergraph LLM
+    current_query = initial_prompt
+    
+    for i in range(iterations):
+        print(f"\n--- Iteration {i+1}/{iterations} ---")
+        
+        # Step 1: First LLM (with hypergraph) responds
+        print(f"\n[LLM 1 - {provider1} with Hypergraph] Processing: {current_query}")
+        
+        # Get the reasoning context
+        reasoning_hg, relevant_nodes, relevant_edges, new_connections = apply_hypergraph_reasoning(env.hypergraph, current_query)
+        
+        # Display reasoning context
+        print(f"\nFound {len(relevant_nodes)} relevant nodes:")
+        for node in relevant_nodes[:5]:
+            print(f"  - {node}")
+        if len(relevant_nodes) > 5:
+            print(f"  - (and {len(relevant_nodes) - 5} more)")
+            
+        print(f"\nTop relevant hyperedges:")
+        for i, (edge_id, edge) in enumerate(relevant_edges[:3]):
+            print(f"  - Edge {edge_id}: {edge['nodes']} (similarity: {edge.get('semantic_similarity', 0):.3f})")
+        if len(relevant_edges) > 3:
+            print(f"  - (and {len(relevant_edges) - 3} more)")
+            
+        if new_connections:
+            print(f"\nCellular automata formed {len(new_connections)} new connections")
+        
+        # Get the LLM response with feedback
+        llm1_response = query_llm(env.hypergraph, current_query, update_graph=True)
+        print(f"\n[LLM 1 Response]:\n{llm1_response}")
+        
+        # Update the hypergraph based on the LLM's feedback
+        updated_hg, changes = update_hypergraph_from_llm_feedback(env.hypergraph, llm1_response)
+        
+        # Display changes made to the hypergraph
+        print("\nChanges made to the hypergraph:")
+        
+        if changes['strengthened']:
+            print("\nStrengthened connections:")
+            for node1, node2, weight_adj, edge_id in changes['strengthened']:
+                print(f"  - Edge {edge_id}: {node1} and {node2} (increased by {weight_adj:.2f})")
+        
+        if changes['weakened']:
+            print("\nWeakened connections:")
+            for node1, node2, weight_adj, edge_id in changes['weakened']:
+                print(f"  - Edge {edge_id}: {node1} and {node2} (decreased by {weight_adj:.2f})")
+        
+        if changes['new']:
+            print("\nNew connections:")
+            for nodes, edge_id in changes['new']:
+                print(f"  - Edge {edge_id}: {', '.join(nodes)}")
+        
+        if not any(changes.values()):
+            print("  No changes were made to the hypergraph.")
+        
+        # Update the environment's hypergraph
+        env.hypergraph = updated_hg
+        
+        # Step 2: Second LLM responds to the first LLM
+        print(f"\n[LLM 2 - {provider2}] Processing response...")
+        llm2_response = query_llm2(f"Previous message: {llm1_response}\n\nYour response:")
+        print(f"\n[LLM 2 Response]:\n{llm2_response}")
+        
+        # Update the query for the next iteration
+        current_query = llm2_response
+    
+    print("\n=== Dream Mode Complete ===")
+    print(f"The hypergraph has been updated based on the conversation.")
+    return env.hypergraph
+
+def customize_dream_parameters():
+    """
+    Allow users to customize the parameters for dream mode (self-talk).
+    """
+    print("\n=== Customize Dream Mode Parameters ===")
+    
+    # Show available providers
+    available_providers = ["ollama"]
+    if OPENAI_AVAILABLE:
+        available_providers.append("openai")
+    if ANTHROPIC_AVAILABLE:
+        available_providers.append("anthropic")
+    if GROQ_AVAILABLE:
+        available_providers.append("groq")
+    if GEMINI_AVAILABLE:
+        available_providers.append("gemini")
+    
+    print(f"Available LLM providers: {', '.join(available_providers)}")
+    
+    # Configure second LLM
+    print("\n--- Second LLM Configuration ---")
+    print("Current settings:")
+    print(f"  Provider: {REASONING_PARAMS.get('llm2_provider', 'ollama')}")
+    print(f"  Model: {REASONING_PARAMS.get('llm2_model', 'llama3')}")
+    if REASONING_PARAMS.get('llm2_api_key'):
+        print(f"  API Key: [API KEY SET]")
+    else:
+        print(f"  API Key: [NOT SET]")
+    
+    # Select provider for second LLM
+    current_provider = REASONING_PARAMS.get("llm2_provider", "ollama")
+    new_provider = input(f"Second LLM provider [{current_provider}]: ").strip().lower()
+    
+    if new_provider and new_provider in available_providers:
+        REASONING_PARAMS["llm2_provider"] = new_provider
+        
+        # If provider changed, reset model to a default for that provider
+        if new_provider != current_provider:
+            if new_provider == "ollama":
+                REASONING_PARAMS["llm2_model"] = "llama3"
+            elif new_provider == "openai":
+                REASONING_PARAMS["llm2_model"] = "gpt-3.5-turbo"
+            elif new_provider == "anthropic":
+                REASONING_PARAMS["llm2_model"] = "claude-3-haiku"
+            elif new_provider == "groq":
+                REASONING_PARAMS["llm2_model"] = "llama3-8b-8192"
+            elif new_provider == "gemini":
+                REASONING_PARAMS["llm2_model"] = "gemini-pro"
+    elif new_provider and new_provider not in available_providers:
+        print(f"Provider '{new_provider}' is not available. Install the required package first.")
+        print(f"Keeping current provider: {current_provider}")
+    
+    # Show available models for the selected provider
+    provider = REASONING_PARAMS.get("llm2_provider", "ollama")
+    if provider in LLM_PROVIDER_MODELS:
+        models = LLM_PROVIDER_MODELS[provider]
+        print(f"Available models for {provider}: {', '.join(models)}")
+    
+    # Select model for second LLM
+    current_model = REASONING_PARAMS.get("llm2_model", "llama3")
+    new_model = input(f"Second LLM model [{current_model}]: ").strip()
+    if new_model:
+        REASONING_PARAMS["llm2_model"] = new_model
+    
+    # API key for second LLM (if not ollama)
+    if provider != "ollama":
+        current_key = REASONING_PARAMS.get("llm2_api_key", "")
+        key_display = "[API KEY SET]" if current_key else "[NOT SET]"
+        new_key = input(f"API key for {provider} {key_display}: ").strip()
+        if new_key:
+            REASONING_PARAMS["llm2_api_key"] = new_key
+    
+    # Dream iterations
+    current_iterations = REASONING_PARAMS.get("dream_iterations", 5)
+    new_iterations = input(f"Default number of dream iterations [{current_iterations}]: ").strip()
+    if new_iterations:
+        try:
+            REASONING_PARAMS["dream_iterations"] = int(new_iterations)
+        except ValueError:
+            print("Invalid value. Keeping current value.")
+    
+    print("\nUpdated dream mode parameters:")
+    print(f"  Second LLM Provider: {REASONING_PARAMS.get('llm2_provider', 'ollama')}")
+    print(f"  Second LLM Model: {REASONING_PARAMS.get('llm2_model', 'llama3')}")
+    if REASONING_PARAMS.get('llm2_api_key'):
+        print(f"  Second LLM API Key: [API KEY SET]")
+    else:
+        print(f"  Second LLM API Key: [NOT SET]")
+    print(f"  Default Dream Iterations: {REASONING_PARAMS.get('dream_iterations', 5)}")
+
 def interactive_mode(env):
     print("Entering interactive mode. Type 'help' for available commands.")
     
@@ -1308,6 +1539,7 @@ def interactive_mode(env):
             print("  remove         - Force a 'remove' action")
             print("  reason [query] - Ask a reasoning query (LLM will respond)")
             print("  reason_fb [q]  - Ask a reasoning query with feedback to update the hypergraph")
+            print("  dream [prompt] - Start a self-talk session between two LLMs")
             print("  save [file]    - Save the current hypergraph and parameters to a file")
             print("  load [file]    - Load a hypergraph and its parameters from a file")
             print("  customize      - Customize hypergraph reasoning parameters and LLM provider settings")
@@ -1587,9 +1819,35 @@ def interactive_mode(env):
                 print(f"Loaded hypergraph with {len(loaded_hg.nodes)} nodes and {len(loaded_hg.hyperedges)} hyperedges.")
                 print(f"Vocabulary updated to {len(env.vocabulary)} words.")
             
+        elif command.startswith("dream"):
+            # Dream mode (self-talk between two LLMs)
+            prompt = command[len("dream"):].strip()
+            if not prompt:
+                prompt = input("Enter initial prompt for dream mode: ")
+            
+            # Save current state before dream session
+            hypergraph_history.append(copy.deepcopy(env.hypergraph))
+            
+            # Get the number of iterations
+            iterations = REASONING_PARAMS.get("dream_iterations", 5)
+            iterations_input = input(f"Number of iterations [{iterations}]: ").strip()
+            if iterations_input and iterations_input.isdigit():
+                iterations = int(iterations_input)
+            
+            # Run dream mode
+            env.hypergraph = dream_mode(env, prompt, iterations)
+            
         elif command == "customize":
-            # Allow users to customize reasoning parameters
-            customize_reasoning_parameters()
+            # Show customize options
+            print("\nCustomize options:")
+            print("  1. Reasoning parameters")
+            print("  2. Dream mode parameters")
+            choice = input("Enter choice [1]: ").strip()
+            
+            if choice == "2":
+                customize_dream_parameters()
+            else:
+                customize_reasoning_parameters()
         elif command == "stats":
             print("\nCurrent Hypergraph Stats:")
             print(f"  Nodes: {len(env.hypergraph.nodes)}")
