@@ -1353,97 +1353,126 @@ def interactive_mode(env):
             contextualize_hypergraph(env.hypergraph)
             print(f"Manual remove executed: {info['action']}")
         elif command.startswith("reason_fb"):
-            # Reasoning with feedback to update the hypergraph
+            # Reasoning with feedback to update the hypergraph in chat mode
             query = command[len("reason_fb"):].strip()
             if not query:
                 query = input("Enter your reasoning query (with feedback): ")
             
-            print("\nProcessing query through hypergraph reasoning with feedback...")
-            # Save current state before modifications
+            # Enter chat mode with feedback
+            print("\n=== Entering Reasoning Chat Mode with Feedback (type #__# to exit) ===")
+            
+            # Save initial state before chat session
             hypergraph_history.append(copy.deepcopy(env.hypergraph))
             
-            # Get the reasoning context first
-            reasoning_hg, relevant_nodes, relevant_edges, new_connections = apply_hypergraph_reasoning(env.hypergraph, query)
-            
-            # Display reasoning context
-            print(f"\nQuery: {query}")
-            print(f"\nFound {len(relevant_nodes)} relevant nodes:")
-            for node in relevant_nodes[:5]:
-                print(f"  - {node}")
-            if len(relevant_nodes) > 5:
-                print(f"  - (and {len(relevant_nodes) - 5} more)")
+            chat_active = True
+            while chat_active:
+                print("\nProcessing query through hypergraph reasoning with feedback...")
                 
-            print(f"\nTop relevant hyperedges:")
-            for i, (edge_id, edge) in enumerate(relevant_edges[:3]):
-                print(f"  - Edge {edge_id}: {edge['nodes']} (similarity: {edge.get('semantic_similarity', 0):.3f})")
-            if len(relevant_edges) > 3:
-                print(f"  - (and {len(relevant_edges) - 3} more)")
+                # Get the reasoning context
+                reasoning_hg, relevant_nodes, relevant_edges, new_connections = apply_hypergraph_reasoning(env.hypergraph, query)
                 
-            if new_connections:
-                print(f"\nCellular automata formed {len(new_connections)} new connections")
-            
-            # Now get the LLM response with feedback
-            response = query_llm(env.hypergraph, query, update_graph=True)
-            provider = REASONING_PARAMS.get("llm_provider", "ollama").capitalize()
-            print(f"\n{provider} Reasoning Output:\n", response)
-            
-            # Update the hypergraph based on the LLM's feedback
-            updated_hg, changes = update_hypergraph_from_llm_feedback(env.hypergraph, response)
-            
-            # Display changes made to the hypergraph
-            print("\nChanges made to the hypergraph:")
-            
-            if changes['strengthened']:
-                print("\nStrengthened connections:")
-                for node1, node2, weight_adj, edge_id in changes['strengthened']:
-                    print(f"  - Edge {edge_id}: {node1} and {node2} (increased by {weight_adj:.2f})")
-            
-            if changes['weakened']:
-                print("\nWeakened connections:")
-                for node1, node2, weight_adj, edge_id in changes['weakened']:
-                    print(f"  - Edge {edge_id}: {node1} and {node2} (decreased by {weight_adj:.2f})")
-            
-            if changes['new']:
-                print("\nNew connections:")
-                for nodes, edge_id in changes['new']:
-                    print(f"  - Edge {edge_id}: {', '.join(nodes)}")
-            
-            if not any(changes.values()):
-                print("  No changes were made to the hypergraph.")
-            
-            # Update the environment's hypergraph
-            env.hypergraph = updated_hg
+                # Display reasoning context
+                print(f"\nQuery: {query}")
+                print(f"\nFound {len(relevant_nodes)} relevant nodes:")
+                for node in relevant_nodes[:5]:
+                    print(f"  - {node}")
+                if len(relevant_nodes) > 5:
+                    print(f"  - (and {len(relevant_nodes) - 5} more)")
+                    
+                print(f"\nTop relevant hyperedges:")
+                for i, (edge_id, edge) in enumerate(relevant_edges[:3]):
+                    print(f"  - Edge {edge_id}: {edge['nodes']} (similarity: {edge.get('semantic_similarity', 0):.3f})")
+                if len(relevant_edges) > 3:
+                    print(f"  - (and {len(relevant_edges) - 3} more)")
+                    
+                if new_connections:
+                    print(f"\nCellular automata formed {len(new_connections)} new connections")
+                
+                # Get the LLM response with feedback
+                response = query_llm(env.hypergraph, query, update_graph=True)
+                provider = REASONING_PARAMS.get("llm_provider", "ollama").capitalize()
+                print(f"\n{provider} Reasoning Output:\n", response)
+                
+                # Update the hypergraph based on the LLM's feedback
+                updated_hg, changes = update_hypergraph_from_llm_feedback(env.hypergraph, response)
+                
+                # Display changes made to the hypergraph
+                print("\nChanges made to the hypergraph:")
+                
+                if changes['strengthened']:
+                    print("\nStrengthened connections:")
+                    for node1, node2, weight_adj, edge_id in changes['strengthened']:
+                        print(f"  - Edge {edge_id}: {node1} and {node2} (increased by {weight_adj:.2f})")
+                
+                if changes['weakened']:
+                    print("\nWeakened connections:")
+                    for node1, node2, weight_adj, edge_id in changes['weakened']:
+                        print(f"  - Edge {edge_id}: {node1} and {node2} (decreased by {weight_adj:.2f})")
+                
+                if changes['new']:
+                    print("\nNew connections:")
+                    for nodes, edge_id in changes['new']:
+                        print(f"  - Edge {edge_id}: {', '.join(nodes)}")
+                
+                if not any(changes.values()):
+                    print("  No changes were made to the hypergraph.")
+                
+                # Update the environment's hypergraph
+                env.hypergraph = updated_hg
+                
+                # Get next query or exit chat mode
+                next_query = input("\nContinue chat (type #__# to exit): ")
+                if next_query.strip() == "#__#":
+                    print("Exiting chat mode...")
+                    chat_active = False
+                else:
+                    query = next_query
             
         elif command.startswith("reason") and not command.startswith("reason_fb"):
+            # Regular reasoning in chat mode
             query = command[len("reason"):].strip()
             if not query:
                 query = input("Enter your reasoning query: ")
             
-            print("\nProcessing query through hypergraph reasoning...")
-            # Get the reasoning context first
-            reasoning_hg, relevant_nodes, relevant_edges, new_connections = apply_hypergraph_reasoning(env.hypergraph, query)
+            # Enter chat mode without feedback
+            print("\n=== Entering Reasoning Chat Mode (type #__# to exit) ===")
             
-            # Display reasoning context
-            print(f"\nQuery: {query}")
-            print(f"\nFound {len(relevant_nodes)} relevant nodes:")
-            for node in relevant_nodes[:5]:
-                print(f"  - {node}")
-            if len(relevant_nodes) > 5:
-                print(f"  - (and {len(relevant_nodes) - 5} more)")
+            chat_active = True
+            while chat_active:
+                print("\nProcessing query through hypergraph reasoning...")
                 
-            print(f"\nTop relevant hyperedges:")
-            for i, (edge_id, edge) in enumerate(relevant_edges[:3]):
-                print(f"  - Edge {edge_id}: {edge['nodes']} (similarity: {edge.get('semantic_similarity', 0):.3f})")
-            if len(relevant_edges) > 3:
-                print(f"  - (and {len(relevant_edges) - 3} more)")
+                # Get the reasoning context
+                reasoning_hg, relevant_nodes, relevant_edges, new_connections = apply_hypergraph_reasoning(env.hypergraph, query)
                 
-            if new_connections:
-                print(f"\nCellular automata formed {len(new_connections)} new connections")
-            
-            # Now get the LLM response
-            response = query_llm(env.hypergraph, query)
-            provider = REASONING_PARAMS.get("llm_provider", "ollama").capitalize()
-            print(f"\n{provider} Reasoning Output:\n", response)
+                # Display reasoning context
+                print(f"\nQuery: {query}")
+                print(f"\nFound {len(relevant_nodes)} relevant nodes:")
+                for node in relevant_nodes[:5]:
+                    print(f"  - {node}")
+                if len(relevant_nodes) > 5:
+                    print(f"  - (and {len(relevant_nodes) - 5} more)")
+                    
+                print(f"\nTop relevant hyperedges:")
+                for i, (edge_id, edge) in enumerate(relevant_edges[:3]):
+                    print(f"  - Edge {edge_id}: {edge['nodes']} (similarity: {edge.get('semantic_similarity', 0):.3f})")
+                if len(relevant_edges) > 3:
+                    print(f"  - (and {len(relevant_edges) - 3} more)")
+                    
+                if new_connections:
+                    print(f"\nCellular automata formed {len(new_connections)} new connections")
+                
+                # Get the LLM response
+                response = query_llm(env.hypergraph, query)
+                provider = REASONING_PARAMS.get("llm_provider", "ollama").capitalize()
+                print(f"\n{provider} Reasoning Output:\n", response)
+                
+                # Get next query or exit chat mode
+                next_query = input("\nContinue chat (type #__# to exit): ")
+                if next_query.strip() == "#__#":
+                    print("Exiting chat mode...")
+                    chat_active = False
+                else:
+                    query = next_query
         elif command == "evolve":
             # Save current state before modifications
             hypergraph_history.append(copy.deepcopy(env.hypergraph))
