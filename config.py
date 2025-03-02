@@ -18,7 +18,7 @@ REASONING_PARAMS = {
     "max_steps": 300,                   # Maximum number of steps for the environment
     # Second LLM for dream/self-talk mode
     "llm2_provider": "ollama",          # Second LLM provider
-    "llm2_model": "llama3",             # Model for the second LLM
+    "llm2_model": "llama3.2",             # Model for the second LLM
     "llm2_api_key": "",                 # API key for the second LLM (if not Ollama)
     "dream_iterations": 5,              # Default number of iterations for dream mode
 }

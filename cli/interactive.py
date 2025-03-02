@@ -18,6 +18,8 @@ from analysis.cellular_automata import apply_ca_rule
 from llm.reasoning import reason_with_llm, check_provider_availability
 from llm.feedback import evaluate_suggestion
 from llm.dream import run_dream_session
+from llm.dream_enhanced import run_enhanced_dream_session
+from llm.dream_feedback import run_dream_feedback_session
 from llm.feedback_reasoning import reason_with_feedback
 from llm.chat import ChatDatabase, chat_with_llm
 from llm.chat_feedback import chat_with_feedback
@@ -35,7 +37,8 @@ class HypergraphShell(cmd.Cmd):
     ║                                                               ║
     ║   Hypergraph Evolution - Semantic Reasoning with LLMs         ║
     ║                                                               ║
-    ║   Type 'help' or '?' to list commands.                        ║
+    ║   Type 'menu' to show the main menu.                          ║
+    ║   Type 'help' or '?' to list all commands.                    ║
     ║   Type 'exit' or 'quit' to exit.                              ║
     ║                                                               ║
     ╚═══════════════════════════════════════════════════════════════╝
@@ -211,17 +214,63 @@ class HypergraphShell(cmd.Cmd):
         print()
     
     def do_dream(self, arg):
-        """Run a dream/self-talk session with the LLM"""
+        """Run a classic dream/self-talk session with a single LLM"""
         try:
             iterations = int(arg) if arg else REASONING_PARAMS["dream_iterations"]
         except ValueError:
             print("Please provide a valid number of iterations.")
             return
         
-        print(f"Running dream session with {REASONING_PARAMS['llm2_provider']} model {REASONING_PARAMS['llm2_model']}...")
+        print(f"Running classic dream session with {REASONING_PARAMS['llm2_provider']} model {REASONING_PARAMS['llm2_model']}...")
         response = run_dream_session(self.hypergraph, iterations)
         
         print("\nDream Session:")
+        print(response)
+        print()
+    
+    def do_dream_enhanced(self, arg):
+        """
+        Run an enhanced dream session with two LLMs in conversation.
+        
+        This creates a dialogue between the primary and secondary LLMs,
+        with each taking turns to explore concepts in the hypergraph.
+        """
+        try:
+            iterations = int(arg) if arg else REASONING_PARAMS["dream_iterations"]
+        except ValueError:
+            print("Please provide a valid number of iterations.")
+            return
+        
+        print(f"Running enhanced dream session between:")
+        print(f"- Primary LLM: {REASONING_PARAMS['llm_provider']} model {REASONING_PARAMS['llm_model']}")
+        print(f"- Secondary LLM: {REASONING_PARAMS['llm2_provider']} model {REASONING_PARAMS['llm2_model']}")
+        
+        response = run_enhanced_dream_session(self.hypergraph, iterations)
+        
+        print("\nEnhanced Dream Session:")
+        print(response)
+        print()
+    
+    def do_dream_fb(self, arg):
+        """
+        Run a dream session with feedback that updates the hypergraph.
+        
+        This creates a dialogue between the primary and secondary LLMs,
+        with each taking turns to explore concepts and suggest updates to the hypergraph.
+        """
+        try:
+            iterations = int(arg) if arg else REASONING_PARAMS["dream_iterations"]
+        except ValueError:
+            print("Please provide a valid number of iterations.")
+            return
+        
+        print(f"Running dream session with feedback between:")
+        print(f"- Primary LLM: {REASONING_PARAMS['llm_provider']} model {REASONING_PARAMS['llm_model']}")
+        print(f"- Secondary LLM: {REASONING_PARAMS['llm2_provider']} model {REASONING_PARAMS['llm2_model']}")
+        
+        self.hypergraph, response = run_dream_feedback_session(self.hypergraph, iterations)
+        
+        print("\nDream Session with Feedback:")
         print(response)
         print()
     
@@ -784,6 +833,170 @@ class HypergraphShell(cmd.Cmd):
     def do_quit(self, arg):
         """Exit the program"""
         return self.do_exit(arg)
+    
+    def do_menu(self, arg):
+        """Show the main menu with organized command categories"""
+        while True:
+            print("\n╔═══════════════════════════════════════════════════════════════╗")
+            print("║                     Hypergraph Evolution                      ║")
+            print("╚═══════════════════════════════════════════════════════════════╝")
+            print("\nMain Menu:")
+            print("  1. Hypergraph Management")
+            print("  2. Node & Edge Operations")
+            print("  3. Analysis & Evolution")
+            print("  4. LLM Interaction")
+            print("  5. Settings")
+            print("  0. Return to command line")
+            
+            choice = input("\nEnter your choice (0-5): ")
+            
+            if choice == "0":
+                break
+            elif choice == "1":
+                self._show_hypergraph_management_menu()
+            elif choice == "2":
+                self._show_node_edge_menu()
+            elif choice == "3":
+                self._show_analysis_menu()
+            elif choice == "4":
+                self._show_llm_menu()
+            elif choice == "5":
+                self._show_customize_menu()
+            else:
+                print("Invalid choice. Please try again.")
+    
+    def _show_hypergraph_management_menu(self):
+        """Show the hypergraph management submenu"""
+        while True:
+            print("\nHypergraph Management:")
+            print("  1. Load hypergraph from file")
+            print("  2. Save hypergraph to file")
+            print("  3. Show current hypergraph")
+            print("  4. Display statistics")
+            print("  0. Back to main menu")
+            
+            choice = input("\nEnter your choice (0-4): ")
+            
+            if choice == "0":
+                break
+            elif choice == "1":
+                filename = input("Enter filename to load: ")
+                self.do_load(filename)
+            elif choice == "2":
+                filename = input("Enter filename to save: ")
+                self.do_save(filename)
+            elif choice == "3":
+                self.do_show("")
+            elif choice == "4":
+                self.do_stats("")
+            else:
+                print("Invalid choice. Please try again.")
+    
+    def _show_node_edge_menu(self):
+        """Show the node and edge operations submenu"""
+        while True:
+            print("\nNode & Edge Operations:")
+            print("  1. Add node")
+            print("  2. Add edge")
+            print("  3. Load vocabulary")
+            print("  4. Generate random hypergraph")
+            print("  0. Back to main menu")
+            
+            choice = input("\nEnter your choice (0-4): ")
+            
+            if choice == "0":
+                break
+            elif choice == "1":
+                node = input("Enter node name: ")
+                self.do_add_node(node)
+            elif choice == "2":
+                nodes = input("Enter nodes (space-separated): ")
+                self.do_add_edge(nodes)
+            elif choice == "3":
+                filename = input("Enter vocabulary filename: ")
+                self.do_load_vocabulary(filename)
+            elif choice == "4":
+                num_edges = input("Enter number of edges (default: 10): ")
+                self.do_generate(num_edges)
+            else:
+                print("Invalid choice. Please try again.")
+    
+    def _show_analysis_menu(self):
+        """Show the analysis and evolution submenu"""
+        while True:
+            print("\nAnalysis & Evolution:")
+            print("  1. Calculate semantic similarities")
+            print("  2. Apply cellular automata rules")
+            print("  3. Visualize hypergraph")
+            print("  4. Plot semantic histogram")
+            print("  5. Write edges to file")
+            print("  0. Back to main menu")
+            
+            choice = input("\nEnter your choice (0-5): ")
+            
+            if choice == "0":
+                break
+            elif choice == "1":
+                self.do_contextualize("")
+            elif choice == "2":
+                threshold = input("Enter threshold (default: from settings): ")
+                self.do_apply_ca(threshold)
+            elif choice == "3":
+                filename = input("Enter filename (default: hypergraph.png): ")
+                self.do_visualize(filename)
+            elif choice == "4":
+                filename = input("Enter filename (default: histogram.png): ")
+                self.do_histogram(filename)
+            elif choice == "5":
+                filename = input("Enter filename (default: edges.txt): ")
+                self.do_write_edges(filename)
+            else:
+                print("Invalid choice. Please try again.")
+    
+    def _show_llm_menu(self):
+        """Show the LLM interaction submenu"""
+        while True:
+            print("\nLLM Interaction:")
+            print("  1. Basic reasoning")
+            print("  2. Reasoning with feedback")
+            print("  3. Evaluate suggestion")
+            print("  4. Chat mode")
+            print("  5. Chat with feedback")
+            print("  6. Classic dream mode")
+            print("  7. Enhanced dream mode")
+            print("  8. Dream with feedback")
+            print("  0. Back to main menu")
+            
+            choice = input("\nEnter your choice (0-8): ")
+            
+            if choice == "0":
+                break
+            elif choice == "1":
+                focus_node = input("Enter focus node (optional): ")
+                self.do_reason(focus_node)
+            elif choice == "2":
+                query = input("Enter initial query: ")
+                if query:
+                    self.do_reason_fb(query)
+            elif choice == "3":
+                suggestion = input("Enter suggestion to evaluate: ")
+                if suggestion:
+                    self.do_evaluate(suggestion)
+            elif choice == "4":
+                self.do_chat("")
+            elif choice == "5":
+                self.do_chat_fb("")
+            elif choice == "6":
+                iterations = input("Enter number of iterations (default: from settings): ")
+                self.do_dream(iterations)
+            elif choice == "7":
+                iterations = input("Enter number of iterations (default: from settings): ")
+                self.do_dream_enhanced(iterations)
+            elif choice == "8":
+                iterations = input("Enter number of iterations (default: from settings): ")
+                self.do_dream_fb(iterations)
+            else:
+                print("Invalid choice. Please try again.")
     
     def emptyline(self):
         """Do nothing on empty line"""

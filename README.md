@@ -112,6 +112,7 @@ python main.py visualize myhypergraph.json --output graph.png
 
 ### Interactive Mode Commands
 
+- `menu`: Show the main menu with organized command categories
 - `help`: Show available commands
 - `add_node <node>`: Add a node to the hypergraph
 - `add_edge <node1> <node2> ...`: Add a hyperedge connecting multiple nodes
@@ -125,7 +126,9 @@ python main.py visualize myhypergraph.json --output graph.png
 - `reason [focus_node]`: Use LLM to reason about the hypergraph
 - `reason_fb <query>`: Interactive reasoning with feedback to update the hypergraph
 - `evaluate <suggestion>`: Evaluate a suggestion using the LLM
-- `dream [iterations]`: Run a dream/self-talk session with the LLM
+- `dream [iterations]`: Run a classic dream/self-talk session with a single LLM
+- `dream_enhanced [iterations]`: Run an enhanced dream session with two LLMs in conversation
+- `dream_fb [iterations]`: Run a dream session with feedback that updates the hypergraph
 - `chat`: Start an interactive chat session with the LLM using the hypergraph as context
 - `chat_fb`: Start a chat session that also updates the hypergraph based on the conversation
 - `visualize [filename]`: Visualize the hypergraph
@@ -134,6 +137,40 @@ python main.py visualize myhypergraph.json --output graph.png
 - `stats`: Display comprehensive statistics about the hypergraph and system
 - `customize`: Customize reasoning parameters and LLM provider settings
 - `exit` or `quit`: Exit the program
+
+### Menu System
+
+The application now features an organized menu system that groups commands into logical categories:
+
+1. **Hypergraph Management**
+   - Load/save hypergraph
+   - Show current hypergraph
+   - Display statistics
+
+2. **Node & Edge Operations**
+   - Add nodes/edges
+   - Load vocabulary
+   - Generate random hypergraph
+
+3. **Analysis & Evolution**
+   - Calculate semantic similarities
+   - Apply cellular automata rules
+   - Visualize hypergraph
+   - Plot semantic histogram
+   - Write edges to file
+
+4. **LLM Interaction**
+   - Basic reasoning
+   - Reasoning with feedback
+   - Evaluate suggestions
+   - Chat modes
+   - Dream modes
+
+5. **Settings**
+   - Customize LLM providers and models
+   - Adjust parameters
+
+To access the menu system, type `menu` at the command prompt.
 
 ## LLM Provider Configuration
 
@@ -196,9 +233,11 @@ This feedback mechanism allows the hypergraph to evolve based on the LLM's reaso
 
 To exit the feedback reasoning mode, type `#__#`.
 
-## Chat Modes
+## Chat and Dream Modes
 
-### Standard Chat
+### Chat Modes
+
+#### Standard Chat
 
 The `chat` command starts an interactive chat session with the LLM, using the hypergraph as context. This allows you to have a conversation with the LLM that's informed by the knowledge represented in the hypergraph.
 
@@ -209,7 +248,7 @@ Features of the standard chat mode:
 
 To exit the chat mode, type `#__#`.
 
-### Chat with Feedback
+#### Chat with Feedback
 
 The `chat_fb` command combines chat functionality with feedback reasoning. It maintains a conversation history while also updating the hypergraph based on the conversation.
 
@@ -222,6 +261,39 @@ Features of the chat with feedback mode:
 This creates a dynamic interaction where your conversation with the LLM directly shapes the hypergraph structure, which in turn influences the LLM's responses in subsequent turns.
 
 To exit the chat with feedback mode, type `#__#`.
+
+### Dream Modes
+
+#### Classic Dream Mode
+
+The `dream` command runs a self-talk session with a single LLM (the secondary LLM configured in settings). The LLM explores connections between concepts in the hypergraph, suggesting new relationships and insights.
+
+Features of the classic dream mode:
+- Single LLM self-talk
+- Exploration of semantic connections
+- Creative ideation based on hypergraph structure
+
+#### Enhanced Dream Mode
+
+The `dream_enhanced` command creates a dialogue between two different LLMs (primary and secondary). Each LLM takes turns exploring concepts in the hypergraph, building on the other's ideas.
+
+Features of the enhanced dream mode:
+- Two LLMs in conversation
+- Clearly labeled responses from each LLM
+- Dynamic exploration of concepts
+- Complementary perspectives from different models
+
+#### Dream with Feedback
+
+The `dream_fb` command combines the enhanced dream dialogue with hypergraph updates. As the two LLMs converse, they also suggest changes to the hypergraph structure, which are applied in real-time.
+
+Features of the dream with feedback mode:
+- Two LLMs in conversation
+- Automatic updates to the hypergraph based on the dialogue
+- Visible summary of changes after each turn
+- Evolution of the hypergraph through multi-LLM collaboration
+
+All dream modes accept an optional `iterations` parameter to control the length of the session.
 
 ## Statistics
 
@@ -256,16 +328,35 @@ Enter command: reason What is the relationship between mammals and birds?
 Enter command: reason_fb How do domestic and wild animals differ?
 ```
 
-### Exploring a Node
+### Enhanced Dream Session
 
 ```
-Enter command: explore cat
+Enter command: dream_enhanced 3
+Running enhanced dream session between:
+- Primary LLM: anthropic (claude-3-sonnet)
+- Secondary LLM: ollama (llama3)
+
+[Anthropic (claude-3-sonnet)]
+[Exploring connections between concepts...]
+
+[Ollama (llama3)]
+[Responding with additional insights...]
 ```
 
-### Evolving the Hypergraph
+### Dream with Feedback
 
 ```
-Enter command: evolve
+Enter command: dream_fb 2
+Running dream session with feedback between:
+- Primary LLM: anthropic (claude-3-sonnet)
+- Secondary LLM: ollama (llama3)
+
+[Anthropic (claude-3-sonnet)]
+[Exploring connections and suggesting updates...]
+
+Changes to hypergraph:
+  - Added node: emergence
+  - Added hyperedge connecting: complexity, emergence, systems
 ```
 
 ### Chat with Feedback
@@ -278,6 +369,19 @@ Changes to hypergraph:
   - Added node: mammals
   - Added node: reptiles
   - Added hyperedge connecting: mammals, reptiles
+```
+
+### Using the Menu System
+
+```
+Enter command: menu
+Main Menu:
+  1. Hypergraph Management
+  2. Node & Edge Operations
+  3. Analysis & Evolution
+  4. LLM Interaction
+  5. Settings
+  0. Return to command line
 ```
 
 ### Saving and Loading
