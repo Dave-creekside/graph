@@ -1,0 +1,67 @@
+Edge 12: Nodes: {'music', 'hermeneutics'}, Semantic Similarity: -0.073
+Edge 21: Nodes: {'wave', 'autopoiesis'}, Semantic Similarity: 0.000
+Edge 39: Nodes: {'dog', 'transformative'}, Semantic Similarity: 0.003
+Edge 53: Nodes: {'awareness', 'conceptual'}, Semantic Similarity: 0.038
+Edge 3: Nodes: {'pattern', 'prey'}, Semantic Similarity: 0.047
+Edge 45: Nodes: {'algorithm', 'interaction', 'bird'}, Semantic Similarity: 0.062
+Edge 33: Nodes: {'situated', 'synergy'}, Semantic Similarity: 0.064
+Edge 32: Nodes: {'neurophenomenological', 'resonance', 'interaction', 'nocturnal'}, Semantic Similarity: 0.064
+Edge 14: Nodes: {'playful', 'reflexive', 'memory', 'wings'}, Semantic Similarity: 0.073
+Edge 35: Nodes: {'autopoietic', 'holistic', 'performative'}, Semantic Similarity: 0.079
+Edge 15: Nodes: {'music', 'pattern'}, Semantic Similarity: 0.091
+Edge 4: Nodes: {'dialogue', 'neural'}, Semantic Similarity: 0.094
+Edge 54: Nodes: {'situated', 'metaphysical'}, Semantic Similarity: 0.094
+Edge 47: Nodes: {'playful', 'music', 'transpersonal', 'emergence'}, Semantic Similarity: 0.094
+Edge 57: Nodes: {'awareness', 'metaphysical'}, Semantic Similarity: 0.103
+Edge 36: Nodes: {'fox', 'neural', 'transcendental'}, Semantic Similarity: 0.111
+Edge 26: Nodes: {'numinous', 'synergistic'}, Semantic Similarity: 0.116
+Edge 27: Nodes: {'intersectional', 'recursive'}, Semantic Similarity: 0.129
+Edge 43: Nodes: {'dynamic', 'discursive', 'homeostasis'}, Semantic Similarity: 0.134
+Edge 38: Nodes: {'epistemic', 'interface'}, Semantic Similarity: 0.135
+Edge 7: Nodes: {'tiger', 'transformation', 'synergy', 'metaphysical'}, Semantic Similarity: 0.150
+Edge 13: Nodes: {'situated', 'qualia', 'interface', 'interaction'}, Semantic Similarity: 0.151
+Edge 23: Nodes: {'epistemological', 'convergence', 'self-organizing'}, Semantic Similarity: 0.163
+Edge 28: Nodes: {'complex', 'ecosystem', 'entanglement'}, Semantic Similarity: 0.164
+Edge 25: Nodes: {'nonlinear', 'pragmatics', 'fierce'}, Semantic Similarity: 0.174
+Edge 48: Nodes: {'intention', 'subliminal', 'transductive', 'perception'}, Semantic Similarity: 0.175
+Edge 16: Nodes: {'phenomenology', 'recursive'}, Semantic Similarity: 0.176
+Edge 20: Nodes: {'distributed', 'contextual'}, Semantic Similarity: 0.180
+Edge 9: Nodes: {'emergent', 'phenomenology', 'pattern'}, Semantic Similarity: 0.183
+Edge 24: Nodes: {'interpretation', 'interface', 'feline', 'small'}, Semantic Similarity: 0.191
+Edge 29: Nodes: {'quantum', 'epistemology', 'metaphysical'}, Semantic Similarity: 0.192
+Edge 34: Nodes: {'qualia', 'agile', 'holistic', 'metaphysical'}, Semantic Similarity: 0.200
+Edge 41: Nodes: {'extended', 'interpretation'}, Semantic Similarity: 0.205
+Edge 37: Nodes: {'feedback', 'complexity', 'emergent', 'awareness'}, Semantic Similarity: 0.206
+Edge 11: Nodes: {'adaptation', 'stochastic', 'complexity', 'fur'}, Semantic Similarity: 0.207
+Edge 66: Nodes: {'qualia', 'synergy'}, Semantic Similarity: 0.212
+Edge 0: Nodes: {'wave', 'complexity', 'algorithm', 'wild'}, Semantic Similarity: 0.222
+Edge 60: Nodes: {'domestic', 'stochastic'}, Semantic Similarity: 0.225
+Edge 46: Nodes: {'entanglement', 'large', 'symbol'}, Semantic Similarity: 0.225
+Edge 31: Nodes: {'axiom', 'convergence', 'interaction'}, Semantic Similarity: 0.230
+Edge 18: Nodes: {'representation', 'network'}, Semantic Similarity: 0.235
+Edge 62: Nodes: {'adaptive', 'reasoning'}, Semantic Similarity: 0.240
+Edge 22: Nodes: {'phenomenology', 'probabilistic'}, Semantic Similarity: 0.249
+Edge 55: Nodes: {'stochastic', 'metaphysical'}, Semantic Similarity: 0.256
+Edge 30: Nodes: {'numinous', 'hypothetical', 'counterfactual', 'emergence'}, Semantic Similarity: 0.270
+Edge 56: Nodes: {'feedback', 'metaphysical'}, Semantic Similarity: 0.272
+Edge 58: Nodes: {'complexity', 'reasoning'}, Semantic Similarity: 0.275
+Edge 6: Nodes: {'emergent', 'aporia', 'convergence', 'propositional'}, Semantic Similarity: 0.296
+Edge 49: Nodes: {'adaptation', 'synergistic', 'performative', 'neural'}, Semantic Similarity: 0.302
+Edge 65: Nodes: {'generative', 'fractal'}, Semantic Similarity: 0.311
+Edge 63: Nodes: {'generative', 'contextual'}, Semantic Similarity: 0.321
+Edge 17: Nodes: {'transformative', 'transformation', 'distributed'}, Semantic Similarity: 0.321
+Edge 10: Nodes: {'insight', 'emergence'}, Semantic Similarity: 0.325
+Edge 5: Nodes: {'domestic', 'generative', 'reasoning', 'metaphysical'}, Semantic Similarity: 0.325
+Edge 40: Nodes: {'stochastic', 'adaptive', 'generative', 'emergence'}, Semantic Similarity: 0.331
+Edge 64: Nodes: {'emergent', 'quantum'}, Semantic Similarity: 0.338
+Edge 44: Nodes: {'boundary', 'integrative'}, Semantic Similarity: 0.341
+Edge 52: Nodes: {'feedback', 'conceptual'}, Semantic Similarity: 0.342
+Edge 2: Nodes: {'emergent', 'conceptual', 'complexity', 'metaphysical'}, Semantic Similarity: 0.361
+Edge 8: Nodes: {'nonlinear', 'transformation', 'metabolism'}, Semantic Similarity: 0.366
+Edge 19: Nodes: {'feedback', 'systemic'}, Semantic Similarity: 0.368
+Edge 61: Nodes: {'emergence', 'reasoning'}, Semantic Similarity: 0.376
+Edge 42: Nodes: {'stochastic', 'fractal', 'reasoning', 'contextual'}, Semantic Similarity: 0.410
+Edge 1: Nodes: {'emergent', 'epistemology'}, Semantic Similarity: 0.419
+Edge 51: Nodes: {'complexity', 'epistemology'}, Semantic Similarity: 0.461
+Edge 59: Nodes: {'complexity', 'generative'}, Semantic Similarity: 0.461
+Edge 50: Nodes: {'conceptual', 'epistemology'}, Semantic Similarity: 1.000

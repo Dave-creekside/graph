@@ -1,24 +1,25 @@
 # Core dependencies
+numpy>=1.20.0
+scipy>=1.7.0
 networkx>=2.6.0
 matplotlib>=3.4.0
-numpy>=1.20.0
 spacy>=3.0.0
-scipy>=1.6.0
-requests>=2.25.0
+psutil>=5.9.0
 
-# LLM Provider dependencies (optional)
-# Uncomment the ones you need
+# LLM providers
+# Uncomment the ones you want to use
 
-# For OpenAI models (GPT-4, GPT-3.5, etc.)
-openai>=1.0.0
+# OpenAI
+# openai>=1.0.0
 
-# For Anthropic models (Claude)
-anthropic>=0.5.0
+# Anthropic
+# anthropic>=0.5.0
 
-# For Groq models
-groq>=0.3.0
+# Groq
+# groq>=0.3.0
 
-# For Google Gemini models
-google-generativeai>=0.3.0
+# Google Gemini
+# google-generativeai>=0.3.0
 
-# Note: For Ollama, install from https://ollama.ai/
+# Additional dependencies for spaCy
+# python -m spacy download en_core_web_md

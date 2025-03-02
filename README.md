@@ -62,37 +62,78 @@ This application demonstrates how hypergraph reasoning and cellular automata rul
 ### Basic Usage
 
 ```
-python hy.py --interactive --skip_init --model llama3
+# Run in interactive mode
+python main.py
+
+# Run with command-line arguments
+python main.py <command> [options]
 ```
 
-### Command-Line Arguments
+### Command-Line Interface
 
-- `--max_steps INT`: Maximum number of RL steps (default: 300)
-- `--verbose`: Enable verbose output
-- `--interactive`: Enter interactive mode after simulation
-- `--vocab_file PATH`: Path to external vocabulary file (one word per line)
-- `--model STRING`: Model to use for reasoning (default: deepseek-r1:latest)
-- `--skip_init`: Skip initial hypergraph generation and go directly to interactive mode
-- `--small_init`: Use a small initial hypergraph (faster startup)
-- `--num_edges INT`: Number of initial hyperedges to generate (default: 50)
+The application now uses a modular command-line interface with subcommands:
+
+```
+# Show help
+python main.py --help
+
+# Run in interactive mode
+python main.py interactive
+
+# Generate a random hypergraph
+python main.py generate --num-edges 20 --output myhypergraph.json
+
+# Load a hypergraph and reason about it
+python main.py reason myhypergraph.json
+
+# Apply cellular automata rules
+python main.py apply-ca myhypergraph.json --output evolved.json
+
+# Visualize a hypergraph
+python main.py visualize myhypergraph.json --output graph.png
+```
+
+### Available Commands
+
+- `interactive`: Run in interactive mode
+- `load`: Load a hypergraph from a file
+- `save`: Save a hypergraph to a file
+- `generate`: Generate a random hypergraph
+- `contextualize`: Calculate semantic similarities for all hyperedges
+- `apply-ca`: Apply cellular automata rules to evolve the hypergraph
+- `reason`: Use LLM to reason about the hypergraph
+- `evaluate`: Evaluate a suggestion using the LLM
+- `dream`: Run a dream/self-talk session with the LLM
+- `visualize`: Visualize the hypergraph
+- `histogram`: Plot a histogram of semantic similarities
+- `spectrum`: Plot the Laplacian eigenvalue spectrum
+- `write-edges`: Write sorted edges to a file
+- `run-rl`: Run the RL environment
 
 ### Interactive Mode Commands
 
 - `help`: Show available commands
-- `step [n]`: Execute n simulation steps (default: 1)
-- `add`: Force an 'add' action
-- `remove`: Force a 'remove' action
-- `reason [query]`: Ask a reasoning query (LLM will respond)
-- `reason_fb [query]`: Ask a reasoning query with feedback to update the hypergraph
-- `save [file]`: Save the current hypergraph to a file
-- `load [file]`: Load a hypergraph from a file
-- `customize`: Customize hypergraph reasoning parameters and LLM provider settings
-- `evolve`: Apply cellular automata rules to evolve the hypergraph
-- `explore [node]`: Explore connections for a specific node
-- `plot`: Update and save plots (graph, histogram, spectrum)
-- `stats`: Display current hypergraph statistics
-- `undo`: Revert to previous hypergraph state (if available)
-- `exit`: Exit interactive mode
+- `add_node <node>`: Add a node to the hypergraph
+- `add_edge <node1> <node2> ...`: Add a hyperedge connecting multiple nodes
+- `show`: Show the current hypergraph
+- `load <file>`: Load a hypergraph from a file
+- `save <file>`: Save the current hypergraph to a file
+- `load_vocabulary <file>`: Load vocabulary from a file
+- `generate [num_edges]`: Generate a random hypergraph
+- `contextualize`: Calculate semantic similarities for all hyperedges
+- `apply_ca [threshold]`: Apply cellular automata rules to evolve the hypergraph
+- `reason [focus_node]`: Use LLM to reason about the hypergraph
+- `reason_fb <query>`: Interactive reasoning with feedback to update the hypergraph
+- `evaluate <suggestion>`: Evaluate a suggestion using the LLM
+- `dream [iterations]`: Run a dream/self-talk session with the LLM
+- `chat`: Start an interactive chat session with the LLM using the hypergraph as context
+- `chat_fb`: Start a chat session that also updates the hypergraph based on the conversation
+- `visualize [filename]`: Visualize the hypergraph
+- `histogram [filename]`: Plot a histogram of semantic similarities
+- `write_edges [filename]`: Write sorted edges to a file
+- `stats`: Display comprehensive statistics about the hypergraph and system
+- `customize`: Customize reasoning parameters and LLM provider settings
+- `exit` or `quit`: Exit the program
 
 ## LLM Provider Configuration
 
@@ -145,11 +186,52 @@ The `reason_fb` command allows the LLM to not only reason based on the hypergrap
 3. The updated hypergraph then influences future reasoning
 
 The LLM can:
-- Strengthen existing connections
-- Weaken existing connections
-- Create new connections
+- Add new nodes to the hypergraph
+- Add new hyperedges connecting nodes
+- Remove existing nodes
+- Remove existing hyperedges
+- Adjust semantic similarities of hyperedges
 
-This feedback mechanism allows the hypergraph to evolve based on the LLM's reasoning, creating a dynamic knowledge representation that adapts over time.
+This feedback mechanism allows the hypergraph to evolve based on the LLM's reasoning, creating a dynamic knowledge representation that adapts over time. The interactive mode allows for continuous refinement through multiple queries, with each response updating the hypergraph structure.
+
+To exit the feedback reasoning mode, type `#__#`.
+
+## Chat Modes
+
+### Standard Chat
+
+The `chat` command starts an interactive chat session with the LLM, using the hypergraph as context. This allows you to have a conversation with the LLM that's informed by the knowledge represented in the hypergraph.
+
+Features of the standard chat mode:
+- Persistent conversation history stored in a SQLite database
+- Hypergraph context provided to the LLM
+- Natural conversational interface
+
+To exit the chat mode, type `#__#`.
+
+### Chat with Feedback
+
+The `chat_fb` command combines chat functionality with feedback reasoning. It maintains a conversation history while also updating the hypergraph based on the conversation.
+
+Features of the chat with feedback mode:
+- All features of standard chat mode
+- Automatic updates to the hypergraph based on the conversation
+- Visible summary of changes made to the hypergraph after each response
+- Continuous evolution of the hypergraph as the conversation progresses
+
+This creates a dynamic interaction where your conversation with the LLM directly shapes the hypergraph structure, which in turn influences the LLM's responses in subsequent turns.
+
+To exit the chat with feedback mode, type `#__#`.
+
+## Statistics
+
+The `stats` command provides comprehensive statistics about the current hypergraph and system:
+
+- **Basic Statistics**: Number of nodes, hyperedges, average node degree, etc.
+- **Semantic Statistics**: Distribution of semantic similarities, average/highest/lowest similarity
+- **Structural Statistics**: Connected components, clustering coefficient, diameter
+- **LLM Configuration**: Current provider, model, temperature, max tokens
+- **System Information**: Memory usage, available providers
 
 ## Save and Load
 
@@ -184,6 +266,18 @@ Enter command: explore cat
 
 ```
 Enter command: evolve
+```
+
+### Chat with Feedback
+
+```
+Enter command: chat_fb
+You: Tell me about the relationship between mammals and reptiles
+Assistant: [LLM response about mammals and reptiles]
+Changes to hypergraph:
+  - Added node: mammals
+  - Added node: reptiles
+  - Added hyperedge connecting: mammals, reptiles
 ```
 
 ### Saving and Loading
